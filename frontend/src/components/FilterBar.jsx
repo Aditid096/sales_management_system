@@ -107,9 +107,8 @@ export default function FilterBar({ query, onChange, onSortChange }) {
               categories: [],
               tags: [],
               paymentMethods: [],
-              dateRange: "",
-              sortBy: "customerName",
-              sortOrder: "asc",
+              dateFrom: "",
+              dateTo: "",
               page: 1
             });
             onSortChange("customerName", "asc");
