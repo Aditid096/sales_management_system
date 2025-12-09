@@ -29,12 +29,16 @@ const getSalesHandler = (req, res) => {
       limit: q.limit || 10,
     };
 
+    // Use the original CSV-based service
     const result = getSales(req.salesData, queryData);
 
     res.json(result);
   } catch (err) {
     console.error("Error in getSalesHandler:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
