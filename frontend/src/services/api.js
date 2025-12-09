@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Dynamic base URL for development vs production
 const baseURL = import.meta.env.MODE === 'production' 
-  ? 'https://your-backend-url.up.railway.app/api' // Update this with your Railway URL
+  ? '/api' // Vercel will route /api to backend automatically
   : 'http://localhost:4000/api';
 
 const api = axios.create({
