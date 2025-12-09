@@ -1,263 +1,266 @@
-# Retail Sales Management System – Architecture
+# TruEstate Sales Management System - Architecture
 
-## 1. System Overview
-The Retail Sales Management System is a small full-stack application that allows users to explore sales transactions using search, filtering, sorting, and pagination.  
-The backend loads sales records from a CSV file into memory and exposes a REST API.  
-The frontend is a single-page React application that consumes this API and renders the “Sales Management System” screen with filters, summary statistics, and a transaction table.
+## Overview
 
----
+This document outlines the architecture of the TruEstate Sales Management System, built for the SDE Intern Assignment. The system demonstrates essential software engineering capabilities with clean, maintainable, and modular architecture supporting advanced Search, Filtering, Sorting, and Pagination functionalities on 1M+ sales records.
 
-## 2. High-Level Architecture
+## Backend Architecture
 
-**Key components:**
+### Technology Stack
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Database:** MongoDB Atlas (512MB free tier)
+- **ODM:** Mongoose
+- **Deployment:** Vercel Serverless Functions
 
-- **Backend (API layer)**
-  - Loads the CSV dataset once on startup.
-  - Applies search, filters, sorting, and pagination to in-memory data.
-  - Exposes a single main endpoint: `GET /api/sales`.
+### Core Components
 
-- **Frontend (UI layer)**
-  - Manages the current query state (search term, filters, sort options, page).
-  - Calls the backend API whenever the query state changes.
-  - Renders summary stats and the paginated transaction table based on the API response.
+**1. Entry Point (`src/index-production.js`)**
+- Smart data loading with MongoDB-first, CSV fallback strategy
+- Environment detection and configuration
+- Graceful error handling and health monitoring
+- CORS configuration for cross-origin requests
 
-**Data Flow (request/response):**
+**2. Controllers (`src/controllers/salesController.js`)**
+- Request validation and parameter parsing
+- Query parameter sanitization
+- Response formatting and error handling
+- Array parameter processing for multi-select filters
 
-1. User interacts with search bar, filters, sorting dropdown, or pagination controls.  
-2. Frontend builds a query object and sends it to `GET /api/sales` as URL query parameters.  
-3. Backend reads the in-memory sales array, applies search → filters → sort → pagination, and computes summary stats.  
-4. Backend returns `{ data, meta, stats }` JSON.  
-5. Frontend updates the table, pagination controls, and statistics cards with the new data.
+**3. Services (`src/services/salesService.js`)**
+- Database abstraction layer
+- MongoDB aggregation pipeline construction
+- Efficient filtering, sorting, and pagination logic
+- Statistics calculation with database-level aggregation
 
----
+**4. Models (`src/models/Sales.js`)**
+- MongoDB schema definition with validation
+- Performance-optimized indexes for search and filtering
+- Data normalization and type enforcement
+- Compound indexes for multi-field queries
 
-## 3. Backend Architecture
+**5. Database Configuration (`src/config/database.js`)**
+- MongoDB Atlas connection management
+- Connection pooling and error handling
+- Graceful shutdown procedures
+- Environment-based configuration
 
-### 3.1 Folder Structure
+## Frontend Architecture
 
-```text
-backend/
-└── src/
-    ├── index.js
-    ├── routes/
-    │   └── salesRoutes.js
-    ├── controllers/
-    │   └── salesController.js
-    ├── services/
-    │   └── salesService.js
-    └── utils/
-        ├── csvLoader.js
-        └── filterUtils.js
+### Technology Stack
+- **Framework:** React 18
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS
+- **HTTP Client:** Axios
+- **Deployment:** Vercel Static Site
+
+### Component Hierarchy
+
+**1. Application Root (`App.jsx`)**
+- Main application wrapper
+- Global state initialization
+- Error boundary implementation
+
+**2. Dashboard Page (`pages/SalesDashboard.jsx`)**
+- Central state management for all filters, search, and pagination
+- API integration and data fetching
+- State synchronization across all child components
+- Loading and error state handling
+
+**3. UI Components**
+- **`SearchBar.jsx`** - Customer Name and Phone Number search
+- **`FilterBar.jsx`** - Multi-select filters with dropdown UI
+- **`TransactionsTable.jsx`** - Data display with responsive design
+- **`PaginationControls.jsx`** - Navigation with state preservation
+- **`StatsCards.jsx`** - Real-time statistics display
+
+**4. Services (`services/api.js`)**
+- API endpoint abstraction
+- Request/response interceptors
+- Error handling and retry logic
+- Environment-based URL configuration
+
+## Data Flow
+
+### Request Processing Pipeline
+
+1. **User Interaction** → Frontend component state update
+2. **State Synchronization** → Dashboard centralizes all query parameters
+3. **API Request** → Axios service layer constructs HTTP request
+4. **Backend Routing** → Express router directs to sales controller
+5. **Parameter Processing** → Controller validates and parses query parameters
+6. **Service Layer** → Sales service builds MongoDB aggregation pipeline
+7. **Database Query** → MongoDB executes optimized queries with indexes
+8. **Data Aggregation** → Database-level filtering, sorting, and pagination
+9. **Statistics Calculation** → Real-time aggregation for summary statistics
+10. **Response Formatting** → Structured JSON with data, metadata, and statistics
+11. **Frontend Update** → React state update triggers component re-rendering
+
+### Database Query Optimization
+
+**MongoDB Aggregation Pipeline:**
+```javascript
+// Example pipeline for complex queries
+[
+  { $match: { customerName: { $regex: searchTerm, $options: 'i' } } },
+  { $match: { customerRegion: { $in: selectedRegions } } },
+  { $sort: { date: -1 } },
+  { $skip: (page - 1) * limit },
+  { $limit: limit },
+  { $project: { /* selected fields */ } }
+]
 ```
 
-### 3.2 Responsibilities by Layer
+**Performance Features:**
+- Text indexes for search operations
+- Compound indexes for multi-field filtering
+- Database-level pagination to minimize memory usage
+- Aggregation pipelines for efficient data processing
 
-- **`index.js` (Application entry)**
-  - Reads the CSV dataset from disk using `csvLoader`.  
-  - Normalizes each row into a consistent JavaScript object.  
-  - Stores the full array of records in memory.  
-  - Attaches the records to each request via middleware.  
-  - Registers the `/api/sales` route and starts the Express server.
+## Folder Structure
 
-- **`routes/salesRoutes.js` (Routing)**
-  - Defines `GET /api/sales`.  
-  - Connects this route to the `salesController.getSalesHandler` function.
+Following the exact structure specified in the assignment requirements:
 
-- **`controllers/salesController.js` (Controller layer)**
-  - Parses query parameters from the HTTP request.  
-  - Normalizes array-type parameters (e.g., `regions`, `genders`, `categories`, `paymentMethods`, `tags`).  
-  - Provides default values for sort and pagination (e.g., `sortBy`, `sortOrder`, `page`, `limit`).  
-  - Calls the service layer with the normalized query.  
-  - Sends JSON responses or errors back to the client.
-
-- **`services/salesService.js` (Business logic)**
-  - Implements the core pipeline to transform the dataset:
-    1. `applySearch` – filter by customer name/phone.  
-    2. `applyFilters` – apply all selected filters.  
-    3. `computeStats` – calculate totals for the filtered results.  
-    4. `applySort` – sort the filtered list.  
-    5. `applyPagination` – slice the sorted list for the current page.  
-  - Returns `{ data, meta, stats }` to the controller.
-
-- **`utils/csvLoader.js` (CSV loading and normalization)**
-  - Uses `csv-parser` to read `truestate_assignment_dataset.csv`.  
-  - Converts the original CSV headers into camelCase keys.  
-  - Ensures numeric fields (age, quantity, discount, amounts) are parsed as numbers.
-
-- **`utils/filterUtils.js` (Search, filter, sort, pagination helpers)**
-  - `applySearch(records, searchTerm)`  
-    - Case-insensitive substring match on `customerName` and `phoneNumber`.  
-  - `applyFilters(records, filters)`  
-    - Applies all active filters (region, gender, age range, category, tags, payment method, date range) in one pass.  
-  - `applySort(records, sortBy, sortOrder)`  
-    - Sorts by fields like `date`, `customerName`, or `quantity`.  
-  - `applyPagination(records, page, limit)`  
-    - Returns a slice plus pagination metadata.  
-  - `computeStats(records)`  
-    - Computes total units sold, total amount, and total discount for the currently filtered set.
-
-### 3.3 Data Model (Normalized Sales Record)
-
-```js
-{
-  transactionId: string,
-  date: string,                // "YYYY-MM-DD"
-  customerId: string,
-  customerName: string,
-  phoneNumber: string,
-  gender: string,
-  age: number | null,
-  customerRegion: string,
-  customerType: string,
-  productId: string,
-  productName: string,
-  brand: string,
-  productCategory: string,
-  tags: string[],
-  quantity: number,
-  pricePerUnit: number,
-  discountPercentage: number,
-  totalAmount: number,
-  finalAmount: number,
-  paymentMethod: string,
-  orderStatus: string,
-  deliveryType: string,
-  storeId: string,
-  storeLocation: string,
-  salespersonId: string,
-  employeeName: string
-}
+```
+root/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   │   └── salesController.js         # Request handling and validation
+│   │   ├── services/
+│   │   │   └── salesService.js           # Business logic and database queries
+│   │   ├── utils/
+│   │   │   ├── csvLoader.js              # CSV fallback functionality
+│   │   │   └── filterUtils.js            # Legacy filtering utilities
+│   │   ├── routes/
+│   │   │   └── salesRoutes.js            # API endpoint definitions
+│   │   ├── models/
+│   │   │   └── Sales.js                  # MongoDB schema and indexes
+│   │   ├── config/
+│   │   │   └── database.js               # MongoDB connection configuration
+│   │   ├── scripts/
+│   │   │   └── importCsvToDb.js          # Data import automation
+│   │   └── index-production.js           # Entry point with smart data loading
+│   ├── package.json                      # Dependencies and scripts
+│   ├── .env                              # Environment configuration
+│   └── truestate_assignment_dataset.csv  # Original dataset (234MB)
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── FilterBar.jsx             # Multi-select filtering interface
+│   │   │   ├── SearchBar.jsx             # Customer Name/Phone search
+│   │   │   ├── TransactionsTable.jsx     # Data display grid
+│   │   │   ├── PaginationControls.jsx    # Navigation controls
+│   │   │   └── StatsCards.jsx            # Summary statistics
+│   │   ├── pages/
+│   │   │   └── SalesDashboard.jsx        # Main dashboard with state management
+│   │   ├── services/
+│   │   │   └── api.js                    # HTTP client and API abstraction
+│   │   ├── App.jsx                       # Application root component
+│   │   ├── main.jsx                      # React application entry point
+│   │   └── index.css                     # Tailwind CSS imports
+│   ├── package.json                      # Frontend dependencies
+│   ├── vite.config.js                    # Build tool configuration
+│   └── tailwind.config.js                # Styling framework configuration
+├── docs/
+│   └── architecture.md                   # Technical documentation
+├── README.md                             # Project documentation
+├── vercel.json                           # Full-stack deployment configuration
+└── package.json                          # Monorepo configuration
 ```
 
----
+## Module Responsibilities
 
-## 4. Frontend Architecture
+### Backend Modules
 
-### 4.1 Folder Structure
+**Controllers Layer:**
+- Handle HTTP requests and responses
+- Validate and sanitize input parameters
+- Parse query strings into structured data
+- Format API responses with consistent structure
 
-```text
-frontend/
-└── src/
-    ├── App.jsx
-    ├── main.jsx
-    ├── index.css
-    ├── pages/
-    │   └── SalesDashboard.jsx
-    ├── components/
-    │   ├── SearchBar.jsx
-    │   ├── FilterBar.jsx
-    │   ├── StatsCards.jsx
-    │   ├── TransactionsTable.jsx
-    │   └── PaginationControls.jsx
-    └── services/
-        └── api.js
-```
+**Services Layer:**
+- Implement business logic for data operations
+- Construct optimized database queries
+- Handle data aggregation and calculations
+- Manage error handling and data validation
 
-### 4.2 Responsibilities
+**Models Layer:**
+- Define MongoDB schemas with proper validation
+- Configure database indexes for performance
+- Handle data normalization and transformation
+- Enforce data integrity constraints
 
-- **`App.jsx`**  
-  - Root component that renders the `SalesDashboard` page.
+**Utils Layer:**
+- Provide utility functions for data processing
+- Handle CSV parsing and fallback operations
+- Implement common helper functions
+- Manage configuration and environment variables
 
-- **`pages/SalesDashboard.jsx`**  
-  - Central container for the Sales Management System screen.  
-  - Holds the current query state (search term, filters, sort options, `page`, and `limit`).  
-  - Calls `fetchSales` from `services/api.js` whenever the query state changes.  
-  - Passes data and callbacks down to child components.
+### Frontend Modules
 
-- **`components/SearchBar.jsx`**  
-  - Text input for searching by customer name or phone number.  
-  - Updates `searchTerm` in the parent state.
+**Components Layer:**
+- Implement reusable UI components
+- Handle user interactions and input validation
+- Manage component-level state and props
+- Provide responsive and accessible interfaces
 
-- **`components/FilterBar.jsx`**  
-  - Renders filter controls for Customer Region, Gender, Age Range, Product Category, Payment Method, and Date From/To.  
-  - Calls `onChange` (for filters) or `onSortChange` (for sorting).  
-  - Resets the page to `1` when filters or sort change.
+**Pages Layer:**
+- Coordinate multiple components into complete views
+- Manage application-level state and data flow
+- Handle routing and navigation logic
+- Integrate with backend APIs
 
-- **`components/StatsCards.jsx`**  
-  - Displays summary metrics returned by the backend: total units sold, total amount, and total discount.  
-  - Updates whenever the backend response changes.
+**Services Layer:**
+- Abstract HTTP communication with backend
+- Handle request/response transformation
+- Implement error handling and retry logic
+- Manage API endpoint configurations
 
-- **`components/TransactionsTable.jsx`**  
-  - Renders the paginated list of sales records as a table.  
-  - Shows loading and “no results found” states as needed.
+## Assignment Compliance
 
-- **`components/PaginationControls.jsx`**  
-  - Uses `meta.currentPage` and `meta.totalPages` from the backend response.  
-  - Renders page buttons and previous/next controls.  
-  - Calls `onPageChange(newPage)` from `SalesDashboard`.
+### Functional Requirements Implementation
 
-- **`services/api.js`**  
-  - Wraps Axios with a base URL pointing to the backend (`http://localhost:4000/api`).  
-  - Exposes a `fetchSales(params)` function that sends all query parameters to `GET /sales`.
+**1. Search Functionality:**
+- Full-text search across Customer Name and Phone Number fields
+- Case-insensitive matching using MongoDB regex queries
+- Performant implementation with database indexes
+- Seamless integration with filtering and sorting
 
----
+**2. Multi-Select Filtering:**
+- Customer Region, Gender, Age Range, Product Category, Tags, Payment Method, Date Range
+- Independent and combined filter operations
+- State preservation across pagination and sorting
+- Efficient database-level filtering using MongoDB aggregation
 
-## 5. API Contract
+**3. Sorting Implementation:**
+- Date (Newest First), Quantity, Customer Name (A-Z) sorting options
+- Database-level sorting for optimal performance
+- Complete state preservation with active filters and search
+- Responsive sorting UI with clear indicators
 
-### Endpoint
+**4. Pagination System:**
+- Exactly 10 items per page as specified
+- Next/Previous navigation with page metadata
+- State retention across all operations
+- Efficient database pagination using skip/limit
 
-`GET /api/sales`
+### Engineering Standards
 
-### Query Parameters
+**Code Quality:**
+- Clean separation of frontend and backend responsibilities
+- Modular architecture with clear boundaries
+- No duplicate logic for filtering or sorting operations
+- Professional coding standards with comprehensive error handling
 
-- `searchTerm` – free-text search on customer name and phone number.  
-- `regions[]` or `regions` – one or more customer regions.  
-- `genders[]` or `genders` – one or more genders.  
-- `ageMin`, `ageMax` – numeric age bounds.  
-- `categories[]` or `categories` – product categories.  
-- `tags[]` or `tags` – tags associated with the sale.  
-- `paymentMethods[]` or `paymentMethods` – payment methods.  
-- `dateFrom`, `dateTo` – inclusive date range (YYYY-MM-DD).  
-- `sortBy` – field name (`date`, `customerName`, `quantity`, etc.).  
-- `sortOrder` – `asc` or `desc`.  
-- `page` – page number (1-based).  
-- `limit` – number of records per page.
+**Performance Optimization:**
+- Database indexes for fast query execution
+- Aggregation pipelines for efficient data processing
+- Minimal data transfer with selective field projection
+- Connection pooling and resource management
 
-### Response Format
-
-```json
-{
-  "data": [],
-  "meta": {
-    "totalItems": 0,
-    "totalPages": 1,
-    "currentPage": 1,
-    "pageSize": 10
-  },
-  "stats": {
-    "totalUnitsSold": 0,
-    "totalAmount": 0,
-    "totalDiscount": 0
-  }
-}
-```
-
----
-
-## 6. Edge Cases and Error Handling
-
-- **No results:**  
-  - If search/filters result in an empty list, `data` is `[]` and `meta.totalItems = 0`.  
-  - The frontend shows a friendly “No results found” message.
-
-- **Invalid numeric ranges (age):**  
-  - Age filters are treated as optional; missing values are ignored.  
-  - Values are converted to numbers; non-numeric values are ignored.
-
-- **Date range:**  
-  - If only `dateFrom` is provided, results must be on or after that date.  
-  - If only `dateTo` is provided, results must be on or before that date.  
-  - If both are provided, records must fall within the inclusive range.
-
-- **Server errors:**  
-  - Unexpected errors in the controller return HTTP 500 with a simple JSON error message.  
-  - CSV loading errors on startup cause the server to log the error and exit.
-
----
-
-## 7. Extensibility
-
-- The CSV loader can be replaced with a database (e.g., PostgreSQL) while keeping the controller and service layers largely unchanged.  
-- Additional filters (e.g., Store Location, Employee Name) can be added by extending `applyFilters` and exposing new UI controls.  
-- New summary stats (e.g., average discount, average order value) can be computed in `computeStats` and displayed in `StatsCards`.  
-- The same API can be consumed by multiple frontends, such as an admin dashboard or reporting tool.
+**Scalability Features:**
+- Database-first architecture supporting millions of records
+- Serverless deployment for automatic scaling
+- Efficient memory usage with streaming operations
+- Stateless backend design for horizontal scaling

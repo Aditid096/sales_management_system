@@ -1,63 +1,97 @@
 # TruEstate Sales Management System
 
-A comprehensive retail sales management system built with React and Node.js, featuring advanced search, filtering, sorting, and pagination capabilities for handling large-scale sales data.
+A production-ready Retail Sales Management System demonstrating essential software engineering capabilities across both frontend and backend components. Built for the TruEstate SDE Intern Assignment, supporting advanced Search, Filtering, Sorting, and Pagination functionalities based on the provided dataset specifications.
 
 ## Tech Stack
 
 **Frontend:** React 18, Vite, Tailwind CSS, Axios  
-**Backend:** Node.js, Express.js, csv-parser, CORS
+**Backend:** Node.js, Express.js, Mongoose  
+**Database:** MongoDB Atlas (512MB free tier)  
+**Deployment:** Vercel (Full-stack serverless deployment)  
+**Data Processing:** MongoDB aggregation pipelines with indexed queries
 
 ## Search Implementation Summary
 
-Implements case-insensitive full-text search across Customer Name and Phone Number fields. Search functionality works seamlessly alongside all filters and sorting options, maintaining query state across pagination.
+Implements case-insensitive full-text search across Customer Name and Phone Number fields as specified in assignment requirements. Uses MongoDB text indexes and regex queries for optimal performance on 1M+ records. Search is accurate, performant, and works alongside filters and sorting with complete state preservation.
 
 ## Filter Implementation Summary
 
-**Multi-select filters** with checkbox-based dropdown UI for:
-- Customer Region (North, South, East, West, Central)
-- Gender (Male, Female) 
-- Product Category (Beauty, Electronics, Clothing, Home & Garden, Sports, Books)
-- Tags (organic, skincare, portable, wireless, gadgets, casual, fashion, unisex, ergonomic, gaming, fitness, outdoor)
-- Payment Method (UPI, Credit Card, Debit Card, Cash, Net Banking)
+Multi-select filtering system supporting all assignment-required fields:
+- **Customer Region:** Multi-select dropdown (North, South, East, West, Central)
+- **Gender:** Multi-select options (Male, Female)
+- **Age Range:** Predefined range selection (18-25, 26-35, 36-45, 46-55, 56+)
+- **Product Category:** Multi-select categories from dataset
+- **Tags:** Multi-select product tags
+- **Payment Method:** Multi-select payment options (UPI, Credit Card, Debit Card, Cash, Net Banking, Wallet)
+- **Date Range:** From/To date inputs with validation
 
-**Range filters** for Age (min/max) and Date ranges. All filters work independently and in combination, with active filter visualization and individual removal capabilities.
+Filters work independently, in combination, and maintain state alongside sorting and search as specified.
 
 ## Sorting Implementation Summary
 
-Sorting options include:
-- Date (Newest/Oldest First) - Default: Newest First
-- Customer Name (A-Z/Z-A)  
-- Quantity (High-Low/Low-High)
+Implements sorting for all assignment-required fields:
+- **Date (Newest First):** Primary sorting option as specified
+- **Quantity:** High-to-Low and Low-to-High options
+- **Customer Name (A-Z):** Alphabetical sorting with reverse option
 
-All sorting preserves active search and filter states across pagination.
+Sorting preserves active search and filters, implemented at database level using MongoDB sort operations for optimal performance on large datasets.
 
 ## Pagination Implementation Summary
 
-Page size: 10 items per page with Next/Previous navigation. Pagination maintains all active search, filter, and sort states. Displays current page metadata and total results count.
+Implements pagination exactly as specified in assignment requirements:
+- **Page size:** 10 items per page (as required)
+- **Navigation:** Next/Previous buttons with page numbers
+- **State retention:** Maintains active search, filter, and sort states across page changes
+- **Database-level:** Uses MongoDB skip/limit for efficient pagination on 1M+ records
+- **Metadata display:** Shows current page, total pages, and total items count
 
 ## Setup Instructions
 
-1. **Clone and install dependencies:**
+### Prerequisites
+- Node.js (v16+)
+- MongoDB Atlas account (free tier)
+
+### Local Development
+1. **Clone repository:**
    ```bash
-   # Install backend dependencies
-   cd backend && npm install
-   
-   # Install frontend dependencies  
-   cd ../frontend && npm install
+   git clone https://github.com/Aditid096/sales_management_system.git
+   cd sales_management_system
    ```
 
-2. **Ensure dataset is in place:**
-   - Place `truestate_assignment_dataset.csv` in the `backend/` directory
-
-3. **Start the application:**
+2. **Backend setup:**
    ```bash
-   # Terminal 1: Start backend server (port 4000)
-   cd backend && npm start
-   
-   # Terminal 2: Start frontend dev server (port 5173)
-   cd frontend && npm run dev
+   cd backend
+   npm install
    ```
 
-4. **Access the application:**
+3. **Environment configuration:**
+   ```bash
+   # Create backend/.env
+   MONGODB_URI=your_mongodb_atlas_connection_string
+   NODE_ENV=development
+   PORT=4000
+   ```
+
+4. **Import dataset to MongoDB:**
+   ```bash
+   npm run import-data
+   ```
+
+5. **Start backend:**
+   ```bash
+   npm start
+   ```
+
+6. **Frontend setup:**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+7. **Access application:**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:4000/api/sales
+
+### Production Deployment
+Live application: https://salesmanagementsystem-pied.vercel.app
