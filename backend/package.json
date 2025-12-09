@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index-production.js",
-    "start-working": "node src/index-working.js",
+    "start": "node src/index-railway-safe.js",
+    "start-production": "node src/index-production.js",
+    "start-working": "node src/index-working.js", 
     "start-old": "node src/index.js",
     "test": "node src/utils/testConnection.js",
     "dev": "nodemon src/index-production.js",
