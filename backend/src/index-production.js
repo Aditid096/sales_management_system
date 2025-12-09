@@ -106,25 +106,19 @@ async function startServer() {
     console.log(`📈 Data source: ${dataInfo.source.toUpperCase()}`);
     console.log(`📊 Records available: ${dataInfo.count}`);
     
-    // Set up routes based on data source
-    if (dataInfo.source === 'mongodb') {
-      // Use MongoDB-based routes
-      console.log('🔧 Configuring MongoDB routes...');
-      const mongoRoutes = require("./routes/salesRoutes-mongo");
-      app.use("/api", mongoRoutes);
-    } else {
-      // Use CSV-based routes
-      console.log('🔧 Configuring CSV routes...');
-      const csvRoutes = require("./routes/salesRoutes");
-      
-      // Middleware to attach CSV data
-      app.use((req, res, next) => {
+    // Use standard routes for both MongoDB and CSV
+    console.log('🔧 Configuring API routes...');
+    const salesRoutes = require("./routes/salesRoutes");
+    
+    // Middleware to attach sales data (for CSV mode)
+    app.use((req, res, next) => {
+      if (dataInfo.source === 'csv') {
         req.salesData = salesData;
-        next();
-      });
-      
-      app.use("/api", csvRoutes);
-    }
+      }
+      next();
+    });
+    
+    app.use("/api", salesRoutes);
 
     // Error handling middleware
     app.use((err, req, res, next) => {
